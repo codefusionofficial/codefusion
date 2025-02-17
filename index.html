@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CodeCraft - Luxury Chat</title>
+  <!-- Google Font: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ----------------------------
+       New Color Palette & Themes (inspired by ChatGPT/Deepseek)
+    ---------------------------- */
+    :root {
+      --primary-bg: #343541;          /* Haupt-Hintergrund – dunkles Grau */
+      --secondary-bg: #202123;        /* Sekundärer Hintergrund – fast schwarz */
+      --accent-color: #10A37F;        /* Frischer Teal-Akzent */
+      --accent-hover: #0D8A6F;        /* Dunklere Variante */
+      --text-color: #F2F2F2;          /* Sehr helles Grau/Weiß */
+      --input-bg: #40414F;            /* Für Eingabefelder */
+      --border-color: #444;           /* Sanfte Abgrenzung */
+      --shadow-color: rgba(16, 163, 127, 0.4); /* Akzentfarbener Schatten */
+      --sidebar-width: 280px;
+      --sidebar-collapsed-width: 80px;
+      --transition-speed: 0.3s;
+    }
+    .light-theme {
+      --primary-bg: #f5f5f5;
+      --secondary-bg: #ffffff;
+      --accent-color: #10A37F;
+      --accent-hover: #0D8A6F;
+      --text-color: #222;
+      --input-bg: #e0e0e0;
+      --border-color: #ccc;
+      --shadow-color: rgba(16, 163, 127, 0.3);
+    }
+
+    /* ----------------------------
+       Global Styles
+    ---------------------------- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text-color);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      transition: background-color var(--transition-speed) ease;
+    }
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(15px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleUp { from { transform: scale(0.8); } to { transform: scale(1); } }
+
+    /* ----------------------------
+       Loading Screen
+    ---------------------------- */
+    #loading-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: var(--primary-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity var(--transition-speed) ease;
+    }
+    #loading-text {
+      color: var(--accent-color);
+      font-size: 1.5em;
+      animation: fadeIn 0.5s alternate infinite;
+    }
+
+    /* ----------------------------
+       Sidebar
+    ---------------------------- */
+    .sidebar {
+      background-color: var(--secondary-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      width: var(--sidebar-collapsed-width);
+      transition: width var(--transition-speed) ease;
+      box-shadow: 2px 0 6px var(--shadow-color);
+      overflow: hidden;
+    }
+    .sidebar:hover { width: var(--sidebar-width); }
+    .sidebar-top {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      gap: 10px;
+      animation: fadeInUp 0.5s ease;
+    }
+    .logo {
+      display: block;
+      max-width: 60px;
+      height: auto;
+      object-fit: contain;
+      transition: max-width var(--transition-speed) ease;
+      box-shadow: 0 4px 8px var(--shadow-color);
+      background: transparent;
+    }
+    .sidebar:hover .logo { max-width: 140px; }
+    .sidebar-content {
+      flex: 1;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-speed) ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .sidebar:hover .sidebar-content { opacity: 1; pointer-events: auto; }
+    .chat-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px 20px;
+      animation: fadeInUp 0.6s ease;
+    }
+    .chat-history h2 { font-size: 1.1em; margin-bottom: 10px; color: var(--accent-color); }
+    .chat-list { list-style: none; }
+    .chat-item {
+      background-color: var(--input-bg);
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color var(--transition-speed) ease;
+      box-shadow: 0 2px 4px var(--shadow-color);
+    }
+    .chat-item:hover { background-color: var(--accent-color); }
+
+    .sidebar-upgrade, .sidebar-settings {
+      margin: 0 20px 10px 20px;
+      background-color: var(--input-bg);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color var(--transition-speed), transform 0.2s;
+      box-shadow: 0 2px 4px var(--shadow-color);
+    }
+    .sidebar-upgrade:hover, .sidebar-settings:hover {
+      background-color: var(--accent-color);
+      transform: scale(1.05);
+    }
+    .sidebar-bottom {
+      border-top: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeInUp 0.8s ease;
+    }
+    .sidebar-bottom button {
+      background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: background-color var(--transition-speed), transform 0.2s;
+      box-shadow: 0 2px 4px var(--shadow-color);
+    }
+    .sidebar-bottom button:hover {
+      background-color: var(--accent-hover);
+      transform: scale(1.05);
+    }
+
+    /* ----------------------------
+       Main Chat Area
+    ---------------------------- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 40px;
+      animation: fadeInUp 0.4s ease;
+      transition: background-color var(--transition-speed) ease;
+    }
+    .header {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 40px;
+      text-align: center;
+      color: var(--accent-color);
+      animation: fadeInUp 0.5s ease;
+    }
+    .chat-window {
+      flex: 1;
+      overflow-y: auto;
+      border-radius: 12px;
+      background-color: var(--input-bg);
+      padding: 20px;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      animation: fadeInUp 0.5s ease;
+    }
+    .input-area {
+      display: flex;
+      margin-top: 20px;
+      animation: fadeInUp 0.6s ease;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background-color: var(--secondary-bg);
+      color: var(--text-color);
+      border-radius: 10px;
+      font-size: 1em;
+      margin-right: 10px;
+      transition: box-shadow var(--transition-speed) ease;
+    }
+    #chat-input:focus {
+      outline: none;
+      box-shadow: 0 0 8px var(--accent-color);
+    }
+    #send-btn {
+      background-color: var(--accent-color);
+      color: #fff;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color var(--transition-speed) ease, transform 0.2s;
+      box-shadow: 0 4px 8px var(--shadow-color);
+    }
+    #send-btn:hover {
+      background-color: var(--accent-hover);
+      transform: scale(1.05);
+    }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--accent-color);
+      border-radius: 8px;
+    }
+    .message {
+      background-color: #22272e;
+      padding: 10px 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      animation: fadeInUp 0.4s ease;
+    }
+    .footer-hint {
+      font-size: 0.7rem;
+      color: #888;
+      text-align: center;
+      margin-top: 10px;
+      opacity: 0.8;
+    }
+
+    /* ----------------------------
+       Plan Upgrade Modal (2nd Level)
+    ---------------------------- */
+    .plan-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: fadeIn 0.3s forwards;
+    }
+    .plan-modal-content {
+      background-color: var(--secondary-bg);
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 900px;
+      width: 90%;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      position: relative;
+      animation: scaleUp 0.3s forwards;
+    }
+    .plan-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 1.2em;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .plan-modal-close:hover { transform: scale(1.2); }
+    .plan-modal-content h2 {
+      text-align: center;
+      font-size: 1.8em;
+      margin-bottom: 20px;
+      color: var(--accent-color);
+    }
+    .plan-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .plan-card {
+      background-color: var(--input-bg);
+      flex: 1 1 250px;
+      min-width: 220px;
+      max-width: 300px;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 4px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color var(--transition-speed), transform 0.2s;
+    }
+    .plan-card:hover {
+      background-color: var(--accent-color);
+      transform: scale(1.02);
+    }
+    .plan-card h3 {
+      margin-bottom: 10px;
+      font-size: 1.4em;
+      color: #fff;
+    }
+    .plan-card .price {
+      font-size: 2em;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .plan-card ul {
+      margin-bottom: 15px;
+      list-style: disc;
+      padding-left: 20px;
+      color: #ccc;
+      font-size: 0.9em;
+      line-height: 1.4;
+      text-align: left;
+    }
+    .plan-btn {
+      margin-top: auto;
+      background-color: #444;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background-color var(--transition-speed);
+    }
+    .plan-card:hover .plan-btn { background-color: #222; }
+
+    /* ----------------------------
+       Payment Modal (Discord Payment Info)
+    ---------------------------- */
+    .payment-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s forwards;
+    }
+    .payment-modal-content {
+      background-color: var(--secondary-bg);
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 700px;
+      width: 90%;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      position: relative;
+      animation: scaleUp 0.3s forwards;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .payment-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 1.2em;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .payment-modal-close:hover { transform: scale(1.2); }
+    .payment-modal-content h2 {
+      text-align: center;
+      font-size: 1.8em;
+      margin-bottom: 10px;
+      color: var(--accent-color);
+    }
+    .payment-plan-summary {
+      font-size: 1em;
+      color: var(--accent-color);
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .discord-info {
+      text-align: center;
+      font-size: 0.95em;
+      line-height: 1.4;
+      color: var(--text-color);
+    }
+    .discord-info a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color var(--transition-speed);
+    }
+    .discord-info a:hover { color: var(--accent-hover); }
+    .discord-join-btn {
+      margin-top: 20px;
+      background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color var(--transition-speed);
+      box-shadow: 0 2px 4px var(--shadow-color);
+    }
+    .discord-join-btn:hover { background-color: var(--accent-hover); }
+
+    /* ----------------------------
+       Settings Modal
+       ---------------------------- */
+    .settings-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: fadeIn 0.3s forwards;
+    }
+    .settings-modal-content {
+      background-color: var(--secondary-bg);
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 12px var(--shadow-color);
+      position: relative;
+      animation: scaleUp 0.3s forwards;
+    }
+    .settings-modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 1.2em;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .settings-modal-close:hover { transform: scale(1.2); }
+    .settings-modal-content h2 {
+      text-align: center;
+      font-size: 1.8em;
+      margin-bottom: 20px;
+      color: var(--accent-color);
+    }
+    .settings-option {
+      margin-bottom: 15px;
+    }
+    .settings-option label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .settings-option input[type="radio"],
+    .settings-option input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    .settings-save {
+      background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color var(--transition-speed);
+    }
+    .settings-save:hover { background-color: var(--accent-hover); }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div id="loading-text">Loading, please wait...</div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <img src="codecraft.png" alt="CodeCraft Logo" class="logo">
+    </div>
+    <div class="sidebar-content">
+      <div class="chat-history" id="chat-history">
+        <h2 id="chatsHeader">Your Chats</h2>
+        <ul class="chat-list" id="chat-list"></ul>
+      </div>
+      <!-- Upgrade Plan entry in sidebar -->
+      <div class="sidebar-upgrade" onclick="openPlanModal()">
+        Upgrade Plan
+      </div>
+      <!-- Settings entry in sidebar -->
+      <div class="sidebar-settings" onclick="openSettingsModal()">
+        Settings
+      </div>
+      <div class="sidebar-bottom">
+        <button id="delete-all-btn">Delete All Chats</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CHAT AREA -->
+  <div class="main">
+    <div class="header" id="mainHeader">Welcome to CodeCraft</div>
+    <div class="chat-window" id="chat-window">
+      <!-- Chat messages dynamically inserted -->
+    </div>
+    <div class="input-area">
+      <input type="text" id="chat-input" placeholder="Type your message..." />
+      <button id="send-btn">Send</button>
+    </div>
+    <div class="footer-hint">
+      ChatGPT can make mistakes. Double-check important information.
+    </div>
+  </div>
+
+  <!-- PLAN UPGRADE MODAL (2nd Level) -->
+  <div id="plan-modal" class="plan-modal">
+    <div class="plan-modal-content">
+      <button class="plan-modal-close" onclick="closePlanModal()">×</button>
+      <h2 id="planModalTitle">Upgrade Your Plan</h2>
+      <div class="plan-cards">
+        <!-- Free Plan Card -->
+        <div class="plan-card">
+          <h3 id="freePlanName">Free Plan</h3>
+          <div class="price" id="freePlanPrice">€0</div>
+          <ul id="freePlanFeatures">
+            <li>Basic coding features</li>
+            <li>Limited resources</li>
+            <li>Community support only</li>
+          </ul>
+          <button class="plan-btn" onclick="selectPlan('Free')">Choose Free</button>
+        </div>
+        <!-- Plus Plan Card -->
+        <div class="plan-card">
+          <h3 id="plusPlanName">Plus Plan</h3>
+          <div class="price" id="plusPlanPrice">€4<span style="font-size:0.6em;">/month</span></div>
+          <ul id="plusPlanFeatures">
+            <li>Enhanced coding features</li>
+            <li>Better resources & docs</li>
+            <li>Community support only</li>
+            <li>AI performance 30% better than Free</li>
+          </ul>
+          <button class="plan-btn" onclick="selectPlan('Plus')">Upgrade Now</button>
+        </div>
+        <!-- Ultra Plan Card -->
+        <div class="plan-card">
+          <h3 id="ultraPlanName">Ultra Plan</h3>
+          <div class="price" id="ultraPlanPrice">€10<span style="font-size:0.6em;">/month</span></div>
+          <ul id="ultraPlanFeatures">
+            <li>All Plus benefits plus exclusive features</li>
+            <li>Extended API access</li>
+            <li>Community support only</li>
+            <li>AI performance 50-70% better than Free</li>
+          </ul>
+          <button class="plan-btn" onclick="selectPlan('Ultra')">Upgrade Now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT MODAL (Discord Payment Info) -->
+  <div id="payment-modal" class="payment-modal">
+    <div class="payment-modal-content">
+      <button class="payment-modal-close" onclick="closePaymentModal()">×</button>
+      <h2 id="paymentModalTitle">Complete Your Subscription</h2>
+      <div class="payment-plan-summary" id="payment-plan-summary"></div>
+      <div class="discord-info">
+        Join our <a href="https://discord.gg/s8T8QgnYZP" target="_blank">Discord server</a> and open a ticket to activate your plan.
+        Enjoy a wide range of payment methods once you join.
+        <br><br>
+        We highly recommend joining our Discord to share feedback, request new features, and help improve our AI for coding responses.
+      </div>
+      <button class="discord-join-btn" onclick="joinDiscord()">Join Discord</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL (2nd Level) -->
+  <div id="settings-modal" class="settings-modal">
+    <div class="settings-modal-content">
+      <button class="settings-modal-close" onclick="closeSettingsModal()">×</button>
+      <h2>Settings</h2>
+      <div class="settings-option">
+        <label>Language:</label>
+        <label><input type="radio" name="language" value="en" checked /> English</label>
+        <label><input type="radio" name="language" value="de" /> Deutsch</label>
+      </div>
+      <div class="settings-option">
+        <label>Theme:</label>
+        <label><input type="radio" name="theme" value="dark" checked /> Dark</label>
+        <label><input type="radio" name="theme" value="light" /> Light</label>
+      </div>
+      <div class="settings-option">
+        <label><input type="checkbox" id="optOutTraining" /> Opt out of using my queries for training</label>
+      </div>
+      <button class="settings-save" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+
+  <script>
+    /* ----------------------------
+       LOADING SCREEN
+    ---------------------------- */
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loadingScreen = document.getElementById('loading-screen');
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => { loadingScreen.style.display = 'none'; }, 300);
+      }, 1500);
+    });
+
+    /* ----------------------------
+       Global Variables & Settings
+    ---------------------------- */
+    let chatHistoryData = [];
+    let currentChatIndex = null;
+    let settings = {
+      language: 'en',
+      theme: 'dark',
+      optOutTraining: false
+    };
+    let selectedPlan = null; // "Free", "Plus", or "Ultra"
+
+    // Translations for bilingual interface
+    const translations = {
+      en: {
+        loadingText: "Loading, please wait...",
+        chatsHeader: "Your Chats",
+        mainHeader: "Welcome to CodeCraft",
+        sendBtn: "Send",
+        deleteAll: "Delete All Chats",
+        sidebarUpgrade: "Upgrade Plan",
+        sidebarSettings: "Settings",
+        planModalTitle: "Upgrade Your Plan",
+        freePlanName: "Free Plan",
+        freePlanPrice: "€0",
+        freePlanFeatures: ["Basic coding features", "Limited resources", "Community support only"],
+        plusPlanName: "Plus Plan",
+        plusPlanPrice: "€4/month",
+        plusPlanFeatures: ["Enhanced coding features", "Better resources & docs", "Community support only", "AI performance 30% better than Free"],
+        ultraPlanName: "Ultra Plan",
+        ultraPlanPrice: "€10/month",
+        ultraPlanFeatures: ["All Plus benefits plus exclusive features", "Extended API access", "Community support only", "AI performance 50-70% better than Free"],
+        paymentTitle: "Complete Your Subscription",
+        paymentSummary: "You selected the",
+        subscribeNow: "Subscribe now"
+      },
+      de: {
+        loadingText: "Lade, bitte warten...",
+        chatsHeader: "Deine Chats",
+        mainHeader: "Willkommen bei CodeCraft",
+        sendBtn: "Senden",
+        deleteAll: "Alle Chats löschen",
+        sidebarUpgrade: "Tarif upgraden",
+        sidebarSettings: "Einstellungen",
+        planModalTitle: "Tarif upgraden",
+        freePlanName: "Gratis Tarif",
+        freePlanPrice: "0 €",
+        freePlanFeatures: ["Basisfunktionen für Coding", "Begrenzte Ressourcen", "Nur Community-Support"],
+        plusPlanName: "Plus Tarif",
+        plusPlanPrice: "4 €/Monat",
+        plusPlanFeatures: ["Erweiterte Coding-Funktionen", "Verbesserte Ressourcen & Dokumentationen", "Nur Community-Support", "KI-Leistung 30% besser als Gratis"],
+        ultraPlanName: "Ultra Tarif",
+        ultraPlanPrice: "10 €/Monat",
+        ultraPlanFeatures: ["Alle Plus-Vorteile plus exklusive Features", "Erweiterter API-Zugriff", "Nur Community-Support", "KI-Leistung 50-70% besser als Gratis"],
+        paymentTitle: "Abonnement abschließen",
+        paymentSummary: "Du hast den Tarif ausgewählt:",
+        subscribeNow: "Abonnieren"
+      }
+    };
+
+    /* ----------------------------
+       Chat Functions
+    ---------------------------- */
+    const chatWindow = document.getElementById('chat-window');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatList = document.getElementById('chat-list');
+    const deleteAllBtn = document.getElementById('delete-all-btn');
+
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message');
+      messageDiv.textContent = text;
+      chatWindow.appendChild(messageDiv);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      chatInput.value = "";
+      if (currentChatIndex === null) {
+        currentChatIndex = chatHistoryData.length;
+        chatHistoryData.push({ name: `Chat ${chatHistoryData.length + 1}`, messages: [text] });
+        renderChatList();
+      } else {
+        chatHistoryData[currentChatIndex].messages.push(text);
+      }
+    }
+    chatInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendMessage(); });
+    sendBtn.addEventListener('click', sendMessage);
+
+    function renderChatList() {
+      chatList.innerHTML = "";
+      chatHistoryData.forEach((chat, index) => {
+        const li = document.createElement('li');
+        li.classList.add('chat-item');
+        li.textContent = chat.name;
+        li.addEventListener('click', () => openChat(index));
+        chatList.appendChild(li);
+      });
+    }
+    function openChat(index) {
+      currentChatIndex = index;
+      chatWindow.innerHTML = "";
+      const chatData = chatHistoryData[index];
+      chatData.messages.forEach(msg => {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message');
+        messageDiv.textContent = msg;
+        chatWindow.appendChild(messageDiv);
+      });
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+    deleteAllBtn.addEventListener('click', () => {
+      chatHistoryData = [];
+      currentChatIndex = null;
+      chatWindow.innerHTML = "";
+      renderChatList();
+    });
+
+    /* ----------------------------
+       Plan Upgrade Modal Functions
+    ---------------------------- */
+    function openPlanModal() {
+      document.getElementById('plan-modal').style.display = 'flex';
+    }
+    function closePlanModal() {
+      document.getElementById('plan-modal').style.display = 'none';
+    }
+    function selectPlan(planName) {
+      selectedPlan = planName;
+      closePlanModal();
+      openPaymentModal();
+    }
+
+    /* ----------------------------
+       Payment Modal Functions (Discord Payment Info)
+    ---------------------------- */
+    function openPaymentModal() {
+      const t = translations[settings.language];
+      document.getElementById('paymentModalTitle').textContent = t.paymentTitle;
+      const summaryText = (settings.language === 'de')
+        ? `${t.paymentSummary} ${selectedPlan}. Trete unserem Discord bei und eröffne ein Ticket, um den Tarif freizuschalten.`
+        : `${t.paymentSummary} ${selectedPlan} plan. Join our Discord and open a ticket to activate your plan.`;
+      document.getElementById('payment-plan-summary').textContent = summaryText;
+      document.getElementById('payment-modal').style.display = 'flex';
+    }
+    function closePaymentModal() {
+      document.getElementById('payment-modal').style.display = 'none';
+    }
+    function joinDiscord() {
+      window.open("https://discord.gg/s8T8QgnYZP", "_blank");
+      closePaymentModal();
+    }
+
+    /* ----------------------------
+       Settings Modal Functions
+    ---------------------------- */
+    function openSettingsModal() {
+      document.getElementById('settings-modal').style.display = 'flex';
+    }
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').style.display = 'none';
+    }
+    function saveSettings() {
+      const langRadios = document.getElementsByName('language');
+      langRadios.forEach(radio => { if(radio.checked) { settings.language = radio.value; } });
+      const themeRadios = document.getElementsByName('theme');
+      themeRadios.forEach(radio => { if(radio.checked) { settings.theme = radio.value; } });
+      settings.optOutTraining = document.getElementById('optOutTraining').checked;
+      applySettings();
+      closeSettingsModal();
+    }
+
+    /* ----------------------------
+       Apply Settings (Language, Theme, etc.)
+    ---------------------------- */
+    function applySettings() {
+      const t = translations[settings.language];
+      document.getElementById('chatsHeader').textContent = t.chatsHeader;
+      document.getElementById('mainHeader').textContent = t.mainHeader;
+      sendBtn.textContent = t.sendBtn;
+      deleteAllBtn.textContent = t.deleteAll;
+      document.querySelector('.sidebar-upgrade').textContent = t.sidebarUpgrade;
+      document.querySelector('.sidebar-settings').textContent = t.sidebarSettings;
+      document.getElementById('planModalTitle').textContent = t.planModalTitle;
+      document.getElementById('freePlanName').textContent = t.freePlanName;
+      document.getElementById('freePlanPrice').textContent = t.freePlanPrice;
+      updateList("freePlanFeatures", t.freePlanFeatures);
+      document.getElementById('plusPlanName').textContent = t.plusPlanName;
+      document.getElementById('plusPlanPrice').innerHTML = t.plusPlanPrice;
+      updateList("plusPlanFeatures", t.plusPlanFeatures);
+      document.getElementById('ultraPlanName').textContent = t.ultraPlanName;
+      document.getElementById('ultraPlanPrice').innerHTML = t.ultraPlanPrice;
+      updateList("ultraPlanFeatures", t.ultraPlanFeatures);
+      document.getElementById('paymentModalTitle').textContent = t.paymentTitle;
+      if(settings.theme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+    }
+    function updateList(listId, items) {
+      const ul = document.getElementById(listId);
+      ul.innerHTML = "";
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+    }
+    applySettings();
+  </script>
+</body>
+</html>
